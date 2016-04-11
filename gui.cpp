@@ -33,6 +33,13 @@ void init_gui() {
 	}
 }
 
+void set_window_icon() {
+	SDL_Surface *icon;
+	icon = SDL_CreateRGBSurfaceFrom((void*)win_icon, 32, 32, 24, 96, 255, 65280, 16711680, 0);
+	printf("23333: 0x%x\n", win_icon[0]);
+	SDL_SetWindowIcon(win, icon);
+}
+
 void quit_gui() {
 	SDL_DestroyRenderer(ren);
 	SDL_DestroyWindow(win);
@@ -330,6 +337,7 @@ void game() {
 int main(int argc, char **argv) {
 	// freopen("debug.log", "w", stdout);
 	init_gui();
+	set_window_icon();
 	game();
 	quit_gui();
 	return 0;

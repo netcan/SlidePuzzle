@@ -96,5 +96,6 @@ struct Tile {
 
 // Public var
 extern queue<int> solution;
+extern const Uint32 win_icon[768];
 
 #endif
