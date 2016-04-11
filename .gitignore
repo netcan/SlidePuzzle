@@ -1,0 +1,5 @@
+*.o
+*.log
+eight*
+*.in
+slidepuzzle
