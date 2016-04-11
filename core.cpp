@@ -156,11 +156,11 @@ int run(const int &s,const int &e) { // Astar
 	return -1; // 无解= =
 }
 
-void outpath(int pid, int ss) { // 后序递归寻找路径
-	if(path[ss].pid == 0) return;
+void outpath(int pid, int ss, int step) { // 后序递归寻找路径
+	if(step == 0 || path[ss].pid == 0) return;
 	for(int i=ss; i>=0; --i) // 往前查找父状态
 		if(path[i].cid == pid)  // 找到父状态
-			outpath(path[i].pid, i); // 后序递归
+			outpath(path[i].pid, i, step - 1); // 后序递归
 	solution.push(path[ss].s);
 }
 
@@ -172,7 +172,7 @@ bool get_solution(int start, int end) {
 	printf("step: %d\n", step);
 	solution.push(start); // 初始状态
 	if(path.size()) {
-		outpath((path.end()-1)->pid, path.size() - 1); // 输出路径
+		outpath((path.end()-1)->pid, path.size() - 1, step); // 输出路径
 		printf("solution size:%ld\n", solution.size());
 		return true;
 	}

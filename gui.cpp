@@ -272,6 +272,11 @@ void game() {
 							break;
 					}
 					break;
+				case SDL_WINDOWEVENT:
+					if(event.window.event == SDL_WINDOWEVENT_CLOSE)
+						status = EXIT;
+					break;
+
 			}
 			// printf("%s key\n", SDL_GetKeyName(event.key.keysym.sym));
 		}

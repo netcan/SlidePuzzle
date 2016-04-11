@@ -37,7 +37,7 @@ int serialization(const board &cur);
 void ser2board(int s, board t);
 bool checkvalid(const int &s, const int &e);
 int run(const int &s,const int &e);
-void outpath(int pid, int ss);
+void outpath(int pid, int ss, int step);
 bool get_solution(int start, int end);
 
 void init_gui();
