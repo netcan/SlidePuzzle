@@ -11,6 +11,23 @@
 
 SDL_Window *win;
 SDL_Renderer *ren;
+TTF_Font *font;
+int WIN_W = WIN_WIDTH;
+int WIN_H = WIN_HEIGHT;
+
+struct {
+	int stat;
+	int curStep;
+	int bestStep;
+	int H;
+	double bestScore;
+	int startTicks;
+	int times;
+	double s;
+	bool has_solution;
+	bool time_update;
+	bool isTarget;
+} score;
 
 void init_gui() {
 	srand(time(NULL));
@@ -18,8 +35,8 @@ void init_gui() {
 		cout << "SDL_INIT error:" << SDL_GetError() << endl;
 		exit(1);
 	}
-	win = SDL_CreateWindow("八数码 powered by netcan", SDL_WINDOWPOS_CENTERED,
-			SDL_WINDOWPOS_CENTERED, WIN_WIDTH, WIN_HEIGHT, SDL_WINDOW_SHOWN);
+	win = SDL_CreateWindow("SlidePuzzle powered by netcan", SDL_WINDOWPOS_CENTERED,
+			SDL_WINDOWPOS_CENTERED, WIN_WIDTH, WIN_HEIGHT, SDL_WINDOW_RESIZABLE);
 	if(win == NULL) {
 		cout << "SDL_CreateWindow error:" << SDL_GetError() << endl;
 		exit(1);
@@ -31,18 +48,33 @@ void init_gui() {
 		SDL_Quit();
 		exit(1);
 	}
+	if(TTF_Init() == -1) {
+		printf("TTF_Init: %s\n", TTF_GetError());
+		SDL_DestroyWindow(win);
+		SDL_DestroyRenderer(ren);
+		SDL_Quit();
+		exit(1);
+	}
+	font = TTF_OpenFont(FONT, FONTSIZE);
+	if(!font) {
+		printf("TTF_OpenFont: %s\n", TTF_GetError());
+		SDL_DestroyWindow(win);
+		SDL_DestroyRenderer(ren);
+		SDL_Quit();
+	}
 }
 
 void set_window_icon() {
 	SDL_Surface *icon;
 	icon = SDL_CreateRGBSurfaceFrom((void*)win_icon, 32, 32, 24, 96, 255, 65280, 16711680, 0);
-	printf("23333: 0x%x\n", win_icon[0]);
 	SDL_SetWindowIcon(win, icon);
 }
 
 void quit_gui() {
 	SDL_DestroyRenderer(ren);
 	SDL_DestroyWindow(win);
+	TTF_CloseFont(font);
+	TTF_Quit();
 	SDL_Quit();
 }
 
@@ -59,7 +91,7 @@ void clip(SDL_Texture *board, SDL_Rect *tiles,Tile *tiles_pos) { // tiles是原�
 	SDL_Rect image_size;
 	SDL_QueryTexture(board, NULL, NULL, &image_size.w, &image_size.h);
 	int clip_lenght = min(image_size.w, image_size.h) / boardsize;
-	int tar_length = WIN_HEIGHT / boardsize;
+	int tar_length = WIN_H / boardsize;
 	for(int i=0; i<boardsize; ++i)
 		for(int j=0; j<boardsize; ++j) {
 			tiles_pos[getpos(i, j)].pos_size.w = tiles_pos[getpos(i, j)].pos_size.h = tar_length;
@@ -77,13 +109,24 @@ void clip(SDL_Texture *board, SDL_Rect *tiles,Tile *tiles_pos) { // tiles是原�
 	printf("233\n");
 }
 
+void win_size_changed(Tile *tiles_pos) {
+	int tar_length = WIN_H / boardsize;
+	for(int i=0; i<boardsize; ++i)
+		for(int j=0; j<boardsize; ++j) {
+			tiles_pos[getpos(i, j)].pos_size.w = tiles_pos[getpos(i, j)].pos_size.h = tar_length;
+			tiles_pos[getpos(i, j)].pos_size.y = i*tar_length;
+			tiles_pos[getpos(i, j)].pos_size.x = j*tar_length;
+		}
+}
+
 void draw_board(SDL_Texture *board, SDL_Rect *tiles, Tile *tiles_pos) {
 	SDL_RenderClear(ren);
+	msg();
 	for(int i=0; i<boardsize; ++i)
 		for(int j=0; j<boardsize; ++j)
 			if(tiles_pos[getpos(i, j)].id != 0) SDL_RenderCopy(ren, board, &tiles[tiles_pos[getpos(i, j)].id], &tiles_pos[getpos(i, j)].pos_size);
 	SDL_RenderPresent(ren);
-}
+};
 
 int get_tile_pos(int id, Tile *tiles_pos) {
 	int pos = -1;
@@ -106,6 +149,19 @@ int serialization(Tile *tiles_pos) {
 	return s;
 }
 
+void score_reset(Tile *tiles_pos) {
+	score.stat = serialization(tiles_pos);
+	score.curStep = 0;
+	score.times = 0;
+	score.time_update = false;
+	score.bestStep = run(serialization(tiles_pos), TARGET) - 1;
+	score.H = H(serialization(tiles_pos), TARGET);
+	score.has_solution = false;
+	score.startTicks = SDL_GetTicks();
+	score.isTarget = false;
+}
+
+
 void random_tiles(Tile *tiles_pos) {
 	bool used[boardsize * boardsize];
 	do {
@@ -119,6 +175,15 @@ void random_tiles(Tile *tiles_pos) {
 			tiles_pos[i].id = id;
 		}
 	} while(!checkvalid(serialization(tiles_pos), TARGET));
+	score_reset(tiles_pos);
+
+}
+
+void set_tiles(Tile *tiles_pos, int s) {
+	for(int i=boardsize*boardsize-1; i>=0; --i) {
+		tiles_pos[i].id = s%10;
+		s/=10;
+	}
 }
 
 void debug(Tile *tiles_pos) {
@@ -183,6 +248,11 @@ bool move_tile(int id, SDL_Texture *board, SDL_Rect *tiles, Tile *tiles_pos) {
 		draw_board(board, tiles, tiles_pos);
 		tiles_pos[to_pos].pos_size.x = tiles_pos[to_pos].pos_size.x - direct * tiles_pos[0].pos_size.w;
 		swap(tiles_pos[from_pos], tiles_pos[to_pos]);
+		// score update
+		++score.curStep;
+		if(isTarget(tiles_pos)) score.isTarget = true;
+		score.stat = serialization(tiles_pos);
+
 		return true;
 	}
 	else if(tiles_pos[from_pos].pos_size.x == tiles_pos[to_pos].pos_size.x && abs(from_pos - to_pos) == 3) { // up or down
@@ -198,6 +268,11 @@ bool move_tile(int id, SDL_Texture *board, SDL_Rect *tiles, Tile *tiles_pos) {
 		draw_board(board, tiles, tiles_pos);
 		tiles_pos[to_pos].pos_size.y =tiles_pos[to_pos].pos_size.y - direct * tiles_pos[0].pos_size.h;
 		swap(tiles_pos[from_pos], tiles_pos[to_pos]);
+		// score update
+		++score.curStep;
+		if(isTarget(tiles_pos)) score.isTarget = true;
+		score.stat = serialization(tiles_pos);
+
 		return true;
 	}
 	else return false;
@@ -230,6 +305,122 @@ int keydown_target_pos(int direction, Tile *tiles_pos) {
 	else return -1;
 }
 
+void mputs(const char *t, const SDL_Color &color, SDL_Rect *pos) {
+	SDL_Surface *mesg = TTF_RenderText_Blended(font, t, color);
+	pos->w = mesg->w;
+	pos->h = mesg->h;
+	SDL_Texture *tex = SDL_CreateTextureFromSurface(ren, mesg);
+	SDL_RenderCopy(ren, tex, NULL, pos);
+	SDL_DestroyTexture(tex);
+	SDL_FreeSurface(mesg);
+	pos->y += pos->h;
+}
+
+void msg() {
+	SDL_Color color = {255, 255, 255, 0};
+	char text[256];
+	// Status
+	SDL_Rect pos = {WIN_H, 20, 0, 0};
+	mputs("Status: ", color, &pos);
+	// Time
+	color.r = 136;
+	color.g = 255;
+	color.b = 104;
+	mputs("Time: ", color, &pos);
+
+	int  t;
+	if(!score.isTarget) t = (score.times + SDL_GetTicks() - score.startTicks) / 1000;
+	else {
+		if(!score.time_update) {
+			score.time_update = true;
+			score.times = score.times + SDL_GetTicks() - score.startTicks;
+		}
+		// printf("Istarget");
+		t = score.times / 1000;
+	}
+
+	sprintf(text, " %02d m %02d s", t/60, t%60);
+	mputs(text, color, &pos);
+
+	// Steps
+	sprintf(text, "Step: %d", score.curStep);
+	color.r = 136;
+	color.g = 255;
+	color.b = 104;
+	mputs(text, color, &pos);
+	// Score
+	color.r = 221;
+	color.g = 17;
+	color.b = 104;
+	mputs("Score: ", color, &pos);
+
+	if(!score.isTarget && !score.has_solution) {
+		score.s = score.bestStep*1.0 / score.curStep;
+		score.s *= score.H;
+		score.s -= ((SDL_GetTicks() - score.startTicks) / 5000.0) * 0.01;
+	} else
+		score.s -= 1;
+	if(score.s < 0) score.s = 0;
+
+	sprintf(text, " %.2f", score.s);
+	mputs(text, color, &pos);
+
+
+	color.r = 221;
+	color.g = 17;
+	color.b = 104;
+	mputs("Best Score: ", color, &pos);
+	sprintf(text, " %.2f", score.bestScore);
+	mputs(text, color, &pos);
+
+	// Tips
+	color.r = 136;
+	color.g = 255;
+	color.b = 104;
+	mputs("Astar", color, &pos);
+	mputs("    [Space]", color, &pos);
+	if(score.isTarget) {
+		color.r = 136;
+		color.g = 255;
+		color.b = 104;
+		mputs("Reset Key:", color, &pos);
+		color.r = 136;
+		color.g = 255;
+		color.b = 104;
+		mputs("         [R]", color, &pos);
+	}
+
+	// SDL_RenderPresent(ren);
+}
+
+int max(double a, double b) {
+	return a>b?a:b;
+}
+
+bool load_data() {
+	FILE *fp = fopen(DATAFILE, "rb");
+	if(fp == NULL) return false;
+	fread(&score, sizeof(score), 1, fp);
+	score.startTicks = SDL_GetTicks();
+	score.time_update = false;
+	printf("load stat: %d\n", score.stat);
+	printf("load start ticks: %d\n", score.startTicks);
+	fclose(fp);
+	return true;
+}
+
+void save_data() {
+	FILE *fp = fopen(DATAFILE, "wb");
+	printf("save stat: %d\n", score.stat);
+	printf("save start ticks: %d\n", score.startTicks);
+	if(!score.time_update)
+		score.times = score.times + SDL_GetTicks() - score.startTicks;
+	fwrite(&score, sizeof(score), 1, fp);
+	fclose(fp);
+}
+
+
+
 void game() {
 	SDL_Rect tiles[boardsize * boardsize];
 	Tile tiles_pos[boardsize * boardsize];
@@ -239,11 +430,13 @@ void game() {
 	SDL_Event event;
 	int status = -1;
 	int direction = -1;
-	random_tiles(tiles_pos);
+	if(load_data())
+		set_tiles(tiles_pos, score.stat);
+	else random_tiles(tiles_pos);
 	cout << serialization(tiles_pos) << endl;
 
-	draw_board(board, tiles, tiles_pos);
 	while(status != EXIT) { // main loop
+		draw_board(board, tiles, tiles_pos);
 		while(SDL_PollEvent(&event)) { // key handle
 			switch(event.type) {
 				case SDL_KEYDOWN:
@@ -280,9 +473,16 @@ void game() {
 					}
 					break;
 				case SDL_WINDOWEVENT:
-					if(event.window.event == SDL_WINDOWEVENT_CLOSE)
-						status = EXIT;
-					break;
+					switch(event.window.event) {
+						case SDL_WINDOWEVENT_CLOSE:
+							status = EXIT;
+						break;
+						case SDL_WINDOWEVENT_SIZE_CHANGED:
+							SDL_GetWindowSize(win, &WIN_W, &WIN_H);
+							status = WINSIZECHANGED;
+							printf("w: %d h:%d\n", WIN_W, WIN_H);
+						break;
+					}
 
 			}
 			// printf("%s key\n", SDL_GetKeyName(event.key.keysym.sym));
@@ -291,23 +491,36 @@ void game() {
 		// printf("status: %d\n", status);
 		switch(status) {
 			case RANDOM:
-				random_tiles(tiles_pos);
-				cout << serialization(tiles_pos) << endl;
-				draw_board(board, tiles, tiles_pos);
+				if(score.isTarget) {
+					score.bestScore = max(max(score.bestScore, score.s), 0);
+					random_tiles(tiles_pos);
+					cout << serialization(tiles_pos) << endl;
+					draw_board(board, tiles, tiles_pos);
+				}
 				status = IDLE;
 				break;
 			case SOLUTION:
 				// printf("serialization: %d\n", serialization(tiles_pos));
-				if (get_solution(serialization(tiles_pos), TARGET))
+				if (get_solution(serialization(tiles_pos), TARGET)) {
+					score.has_solution = true;
 					status = SOLUTIONING;
+				}
 				else status = IDLE;
 				break;
 			case MOVING:
-				move_tile(keydown_target_pos(direction, tiles_pos), board, tiles, tiles_pos);
-				printf("direction: %d\n", direction);
-				printf("target_id: %d\n", keydown_target_pos(direction, tiles_pos));
+				if(!score.isTarget) {
+					move_tile(keydown_target_pos(direction, tiles_pos), board, tiles, tiles_pos);
+					printf("direction: %d\n", direction);
+					printf("target_id: %d\n", keydown_target_pos(direction, tiles_pos));
+					status = IDLE;
+					direction = -1;
+				}
+				else status = IDLE;
+				break;
+			case WINSIZECHANGED:
+				win_size_changed(tiles_pos);
+				// draw_board(board, tiles, tiles_pos);
 				status = IDLE;
-				direction = -1;
 				break;
 			case SOLUTIONING:
 				int next = get_solution_step();
@@ -318,6 +531,7 @@ void game() {
 				break;
 		}
 	}
+	save_data();
 
 
 	// debug(tiles);

@@ -1,4 +1,4 @@
-LIBS = /usr/local/lib/libSDL2.a /usr/local/lib/libSDL2_image.a /usr/local/lib/libSDL2_ttf.a  -ldl -lpthread
+LIBS = /usr/local/lib/libSDL2.a /usr/local/lib/libSDL2_image.a /usr/local/lib/libSDL2_ttf.a  -ldl -lpthread -lfreetype
 FLAG = -g -Wall
 CC = g++
 

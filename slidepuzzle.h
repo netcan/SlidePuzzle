@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_ttf.h>
 
 using namespace std;
 
@@ -54,6 +55,8 @@ int get_solution_step();
 int serialization(Tile *tiles_pos);
 bool isTarget(Tile *tiles_pos);
 void game();
+void msg();
+bool load_data();
 
 // Core
 struct Status {
@@ -88,6 +91,10 @@ struct Status {
 #define MOVEDOWN 7
 #define IDLE 8
 #define RANDOM 9
+#define WINSIZECHANGED 10
+#define FONT "font.ttf"
+#define DATAFILE "slidepuzzle.dat"
+#define FONTSIZE 32
 
 struct Tile {
 	SDL_Rect pos_size;
