@@ -355,7 +355,8 @@ void msg() {
 	mputs("Score: ", color, &pos);
 
 	if(!score.isTarget && !score.has_solution) {
-		score.s = score.bestStep*1.0 / score.curStep;
+		if(score.curStep == 0) score.s = 0.0;
+		else score.s = score.bestStep*1.0 / score.curStep;
 		score.s *= score.H;
 		score.s -= ((SDL_GetTicks() - score.startTicks) / 5000.0) * 0.01;
 	} else
