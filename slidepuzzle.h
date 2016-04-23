@@ -19,6 +19,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_mixer.h>
 
 using namespace std;
 
@@ -78,7 +79,7 @@ struct Status {
 #define WIN_HEIGHT 480
 #define boardsize 3
 #define move_speed 200
-#define move_step 10
+#define move_step 12
 #define IMAGE "./image.png"
 #define TARGET 123456780
 #define EXIT 0
@@ -94,6 +95,7 @@ struct Status {
 #define WINSIZECHANGED 10
 #define FONT "font.ttf"
 #define DATAFILE "slidepuzzle.dat"
+#define SOUND "switch.oga"
 #define FONTSIZE 32
 
 struct Tile {

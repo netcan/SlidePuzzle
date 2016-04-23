@@ -12,6 +12,8 @@
 SDL_Window *win;
 SDL_Renderer *ren;
 TTF_Font *font;
+Mix_Music *sound;
+
 int WIN_W = WIN_WIDTH;
 int WIN_H = WIN_HEIGHT;
 
@@ -33,27 +35,27 @@ void init_gui() {
 	srand(time(NULL));
 	if(SDL_Init(SDL_INIT_VIDEO) != 0) {
 		cout << "SDL_INIT error:" << SDL_GetError() << endl;
-		exit(1);
+		exit(2);
 	}
 	win = SDL_CreateWindow("SlidePuzzle powered by netcan", SDL_WINDOWPOS_CENTERED,
 			SDL_WINDOWPOS_CENTERED, WIN_WIDTH, WIN_HEIGHT, SDL_WINDOW_RESIZABLE);
 	if(win == NULL) {
 		cout << "SDL_CreateWindow error:" << SDL_GetError() << endl;
-		exit(1);
+		exit(2);
 	}
 	ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	if(ren == NULL) {
 		cout << "SDL_CreateRenderer error:" << SDL_GetError() << endl;
 		SDL_DestroyWindow(win);
 		SDL_Quit();
-		exit(1);
+		exit(2);
 	}
 	if(TTF_Init() == -1) {
 		printf("TTF_Init: %s\n", TTF_GetError());
 		SDL_DestroyWindow(win);
 		SDL_DestroyRenderer(ren);
 		SDL_Quit();
-		exit(1);
+		exit(2);
 	}
 	font = TTF_OpenFont(FONT, FONTSIZE);
 	if(!font) {
@@ -61,7 +63,43 @@ void init_gui() {
 		SDL_DestroyWindow(win);
 		SDL_DestroyRenderer(ren);
 		SDL_Quit();
+		exit(2);
 	}
+
+	// load support for the OGG and MOD sample/music formats
+	int flags=MIX_INIT_OGG|MIX_INIT_MOD;
+	int initted=Mix_Init(flags);
+	if(initted&flags != flags) {
+		printf("Mix_Init: Failed to init required ogg and mod support!\n");
+		printf("Mix_Init: %s\n", Mix_GetError());
+		SDL_DestroyWindow(win);
+		SDL_DestroyRenderer(ren);
+		TTF_CloseFont(font);
+		SDL_Quit();
+		exit(2);
+	}
+	if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024)==-1) {
+		printf("Mix_OpenAudio: %s\n", Mix_GetError());
+		SDL_DestroyWindow(win);
+		SDL_DestroyRenderer(ren);
+		TTF_CloseFont(font);
+		Mix_Quit();
+		SDL_Quit();
+		exit(2);
+	}
+
+	sound=Mix_LoadMUS(SOUND);
+	if(!sound) {
+		printf("Mix_LoadMUS(\"SOUND\"): %s\n", Mix_GetError());
+		SDL_DestroyWindow(win);
+		SDL_DestroyRenderer(ren);
+		TTF_CloseFont(font);
+		Mix_CloseAudio();
+		Mix_Quit();
+		SDL_Quit();
+		exit(2);
+	}
+
 }
 
 void set_window_icon() {
@@ -75,6 +113,9 @@ void quit_gui() {
 	SDL_DestroyWindow(win);
 	TTF_CloseFont(font);
 	TTF_Quit();
+	Mix_FreeMusic(sound);
+	Mix_CloseAudio();
+	Mix_Quit();
 	SDL_Quit();
 }
 
@@ -235,6 +276,7 @@ bool move_tile(int id, SDL_Texture *board, SDL_Rect *tiles, Tile *tiles_pos) {
 	// printf("w: %d\n", tiles_pos[from_pos].pos_size.w);
 	int delay = move_speed / tiles_pos[from_pos].pos_size.w;
 	if(tiles_pos[from_pos].pos_size.y == tiles_pos[to_pos].pos_size.y && abs(from_pos-to_pos) == 1) { // left or right
+		Mix_PlayMusic(sound, 0);
 		int direct = 0;
 		if(from_pos > to_pos) direct = -1;
 		else direct = 1;
@@ -256,6 +298,7 @@ bool move_tile(int id, SDL_Texture *board, SDL_Rect *tiles, Tile *tiles_pos) {
 		return true;
 	}
 	else if(tiles_pos[from_pos].pos_size.x == tiles_pos[to_pos].pos_size.x && abs(from_pos - to_pos) == 3) { // up or down
+		Mix_PlayMusic(sound, 0);
 		int direct = 0;
 		if(from_pos > to_pos) direct = -1;
 		else direct = 1;
