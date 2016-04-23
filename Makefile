@@ -1,6 +1,6 @@
 LIBS = /usr/local/lib/libSDL2.a  /usr/local/lib/libSDL2_mixer.a /usr/local/lib/libSDL2_image.a /usr/local/lib/libSDL2_ttf.a  -ldl -lpthread -lfreetype
 FLAG = -g -Wall -O3
-CC = g++
+CC = clang++
 
 slidepuzzle: core.o gui.o window_icon.o
 	$(CC)  $(FLAG) -o $@ core.o gui.o window_icon.o $(LIBS)

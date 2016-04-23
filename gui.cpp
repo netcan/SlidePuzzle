@@ -397,13 +397,15 @@ void msg() {
 	color.b = 104;
 	mputs("Score: ", color, &pos);
 
-	if(!score.isTarget && !score.has_solution) {
-		if(score.curStep == 0) score.s = 0.0;
-		else score.s = score.bestStep*1.0 / score.curStep;
-		score.s *= score.H;
-		score.s -= ((SDL_GetTicks() - score.startTicks) / 5000.0) * 0.01;
-	} else
-		score.s -= 1;
+	if(!score.isTarget) {
+		if(!score.has_solution) {
+			if(score.curStep == 0) score.s = 0.0;
+			else score.s = score.bestStep*1.0 / score.curStep;
+			score.s *= score.H;
+			score.s -= ((SDL_GetTicks() - score.startTicks) / 5000.0) * 0.01;
+		} else
+			score.s -= 1;
+	}
 	if(score.s < 0) score.s = 0;
 
 	sprintf(text, " %.2f", score.s);
@@ -435,10 +437,6 @@ void msg() {
 	}
 
 	// SDL_RenderPresent(ren);
-}
-
-int max(double a, double b) {
-	return a>b?a:b;
 }
 
 bool load_data() {
@@ -534,9 +532,17 @@ void game() {
 		// app handle
 		// printf("status: %d\n", status);
 		switch(status) {
+			case IDLE:
+				if(score.isTarget) {
+					// printf("bestscore: %f score: %f\n",score.bestScore, score.s);
+					if(score.has_solution) score.s = 0;
+					score.bestScore = max(max(score.bestScore, score.s), 0.0);
+					draw_board(board, tiles, tiles_pos);
+					// cout << serialization(tiles_pos) << endl;
+				}
+				break;
 			case RANDOM:
 				if(score.isTarget) {
-					score.bestScore = max(max(score.bestScore, score.s), 0);
 					random_tiles(tiles_pos);
 					cout << serialization(tiles_pos) << endl;
 					draw_board(board, tiles, tiles_pos);
