@@ -124,7 +124,7 @@ void draw_board(SDL_Texture *board, SDL_Rect *tiles, Tile *tiles_pos) {
 	msg();
 	for(int i=0; i<boardsize; ++i)
 		for(int j=0; j<boardsize; ++j)
-			if(tiles_pos[getpos(i, j)].id != 0) SDL_RenderCopy(ren, board, &tiles[tiles_pos[getpos(i, j)].id], &tiles_pos[getpos(i, j)].pos_size);
+			if(tiles_pos[getpos(i, j)].id != 0 || score.isTarget) SDL_RenderCopy(ren, board, &tiles[tiles_pos[getpos(i, j)].id], &tiles_pos[getpos(i, j)].pos_size);
 	SDL_RenderPresent(ren);
 };
 
