@@ -26,6 +26,7 @@ void input(board s) { // 输入状态
         for(int j=1; j<=3; ++j)
             scanf("%1d", &s[i][j]);
 }
+
 void output(const int &s) { // 输出状态
 	board tmp;
 	ser2board(s, tmp);
@@ -44,6 +45,7 @@ int H(int cur, int e) { // 评估函数，当H==0的时候说明状态相等，H
 		e/=10;
 	}
 	return d;
+	// return abs(cur - e);
 }
 
 int F(const Status &s) { // F = G + H
