@@ -1,6 +1,6 @@
 *.o
 *.log
-eight*
 *.in
+eight
 slidepuzzle
 slidepuzzle.dat
